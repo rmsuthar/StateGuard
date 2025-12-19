@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StateGuard.js - Security Demo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 40px;
+            line-height: 1.6;
+        }
+
+        .box {
+            border: 2px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 500px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .log {
+            background: #f4f4f4;
+            padding: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .alert {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>StateGuard.js Live Guard</h2>
+    <div class="box">
+        <p>Try to <strong>right-click -> Inspect</strong> this button and remove the <code>disabled</code> attribute in
+            the console.</p>
+
+        <button id="secureBtn" class="btn" disabled>Protected Action</button>
+
+        <hr>
+        <button onclick="unlockProgrammatically()" style="margin-top: 10px;">
+            Unlock via Authorized Script
+        </button>
+    </div>
+
+    <div id="violationLog" class="log">Waiting for tamper attempts...</div>
+
+    <script src="src/StateGuard.js"></script>
+
+    <script>
+        // 2. Initialize Protection
+        StateGuard.protect('#secureBtn', {
+            attributes: ['disabled', 'class'],
+            maxAttempts: 3,
+            onViolation: (el, count) => {
+                const log = document.getElementById('violationLog');
+                log.innerHTML = `<span class="alert">TAMPER DETECTED! Attempt #${count}</span><br>` +
+                    `Reporting to: /api/security/violation...`;
+
+                // Simulate fetch to your Node.js server
+                console.error("Violation reported to server for element:", el.id);
+            }
+        });
+
+        // 3. Demonstrate Authorized Update
+        function unlockProgrammatically() {
+            const btn = document.getElementById('secureBtn');
+            StateGuard.update(btn, (el) => {
+                el.disabled = false;
+                el.innerText = "Unlocked & Safe";
+                el.style.backgroundColor = "#e1f5fe";
+            });
+            document.getElementById('violationLog').innerText = "Update authorized by StateGuard gateway.";
+        }
+    </script>
+</body>
+
+</html>
