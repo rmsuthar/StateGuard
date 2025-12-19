@@ -1,14 +1,21 @@
 {
     "name": "state-guard-js",
     "version": "1.0.0",
-    "main": "dist/state-guard.obf.js",
+    "description": "Proactive DOM attribute protection library.",
+    "main": "dist/state-guard.min.js",
+    "module": "src/StateGuard.js",
     "scripts": {
-        "test": "jest",
-        "build": "terser src/StateGuard.js -o dist/state-guard.min.js --compress --mangle",
-        "obfuscate": "javascript-obfuscator src/StateGuard.js --output dist/state-guard.obf.js --self-defending true"
+        "test": "jest --forceExit --detectOpenHandles",
+        "build": "mkdir -p dist && terser src/StateGuard.js -o dist/state-guard.min.js --compress --mangle",
+        "obfuscate": "javascript-obfuscator src/StateGuard.js --output dist/state-guard.obf.js --self-defending true",
+        "release": "npm test && npm run build && npm run obfuscate"
+    },
+    "jest": {
+        "testEnvironment": "jsdom"
     },
     "devDependencies": {
         "jest": "^29.0.0",
+        "jest-environment-jsdom": "^29.0.0",
         "javascript-obfuscator": "^4.0.0",
         "terser": "^5.15.0"
     }

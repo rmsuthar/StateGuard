@@ -45,8 +45,18 @@ const StateGuard = (function () {
     };
 
     return {
-        protect: (sel, opt) => document.querySelectorAll(sel).forEach(e => registry.set(e, new Guard(e, opt))),
+        protect: (sel, opt) => {
+            document.querySelectorAll(sel).forEach(e => registry.set(e, new Guard(e, opt)));
+        },
         update: (el, fn) => registry.get(el)?.exec(fn),
-        Guard // Exported for adapters
+        // ADD THIS: Method to kill all observers for testing
+        destruct: () => {
+            registry.forEach(guard => guard.obs.disconnect());
+            registry.clear();
+        }
     };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = StateGuard;
+}
