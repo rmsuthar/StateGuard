@@ -56,7 +56,7 @@ tags: [StateGuard.js, Security, JavaScript, Web Development]
 
 # 🛡️ StateGuard.js
 
-GitHub: [StateGuard.js](https://github.com/ravindrasuthar/state-guard-js)
+GitHub: [StateGuard.js](https://github.com/rmsuthar/StateGuard)
 
 
 > Stop users from messing with your UI logic via the console.
