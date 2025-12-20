@@ -98,6 +98,21 @@ Initializes protection on one or more elements.
 |maxAttempts|number,3,Number of manual changes allowed before triggering a violation.|
 |onViolation|function,null,Callback executed when maxAttempts is reached.|
 
+**Key Features**
+
+* Persistent State: Automatically reverts any unauthorized attribute changes.
+* Threshold Alerts: Triggers security callbacks after a set number of tamper attempts.
+* Framework Agnostic: Works with Vanilla JS, React, and Angular.
+* Backend Sync: Built-in hooks to report "Hacker" behavior to your servers.
+
+**Installation**
+
+```bash
+# Add to your project
+npm install state-guard-js # (Hypothetical)
+```
+
+
 ## 🛠️ Integration Guide
 
 ### Vanilla JavaScript
