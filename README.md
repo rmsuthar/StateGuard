@@ -1,6 +1,6 @@
 # 🛡️ StateGuard.js
 
-GitHub: [StateGuard.js](https://github.com/rmsuthar/StateGuard)
+Website: [StateGuard.js](https://rmsuthar.github.io/StateGuard/)
 
 
 > Stop users from messing with your UI logic via the console.
