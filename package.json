@@ -11,7 +11,7 @@
         "dist",
         "src",
         "README.md"
-    ]
+    ],
     "scripts": {
         "test": "jest --forceExit --detectOpenHandles",
         "build": "mkdir -p dist && terser src/StateGuard.js -o dist/state-guard.min.js --compress --mangle",
