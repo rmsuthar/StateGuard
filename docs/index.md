@@ -1,4 +1,18 @@
+---
+title: StateGuard.js
+description: Stop users from messing with your UI logic via the console.
+tags: [StateGuard.js, Security, JavaScript, Web Development]
+---
+<style>
+.markdown-body h1:first-child:not(.show-title) {
+    display: none;
+}
+</style>
+
 # 🛡️ StateGuard.js
+
+GitHub: [StateGuard.js](https://github.com/ravindrasuthar/state-guard-js)
+
 
 > Stop users from messing with your UI logic via the console.
 
