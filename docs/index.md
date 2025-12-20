@@ -72,6 +72,32 @@ StateGuard.js is a lightweight utility that locks DOM element attributes. If a u
 
 ---
 
+### Core Concepts
+Snapshotting: The library takes a "Source of Truth" snapshot of an element's attributes upon initialization.
+
+**The Guard:** A MutationObserver watches the element 24/7. If an attribute is changed manually, it is instantly reverted to the snapshot.
+
+**Programmatic Gateway:** Authorized changes must pass through the .update() method, which temporarily unlocks the element and updates the snapshot.
+
+**Installation**
+Include the obfuscated or minified version of StateGuard.js at the bottom of your **HTML body:**
+
+```html
+<script src="js/state-guard.min.js"></script>
+```
+
+
+### API Reference
+StateGuard.protect(selector, options)
+Initializes protection on one or more elements.
+
+|Property|Type|Default|Description|
+|---|---|---|---|
+|selector|string|Required|"CSS selector (e.g., #btn, .admin-fields)."|
+|attributes|array or string,'all',"List of attributes to protect (e.g., ['class', 'disabled'])."|
+|maxAttempts|number,3,Number of manual changes allowed before triggering a violation.|
+|onViolation|function,null,Callback executed when maxAttempts is reached.|
+
 ## 🛠️ Integration Guide
 
 ### Vanilla JavaScript
@@ -79,10 +105,31 @@ StateGuard.js is a lightweight utility that locks DOM element attributes. If a u
 Protect any element using standard CSS selectors.
 
 ```javascript
-StateGuard.protect('.restricted-action', {
-  attributes: ['disabled', 'readonly', 'data-id'],
-  maxAttempts: 5,
-  onViolation: (el, count) => reportToBackend(el, count)
+StateGuard.protect('.secure-action', {
+    attributes: ['disabled', 'class', 'onclick'],
+    maxAttempts: 3,
+    onViolation: (el, count) => {
+        console.error("Reporting tamper attempt to server...");
+        
+        // Send the report to your backend
+        fetch('/api/security/log-tamper', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                elementId: el.id || 'unnamed-element',
+                elementTag: el.tagName,
+                attempts: count,
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent
+            })
+        })
+        .then(() => {
+            if (count > 5) {
+                alert("Security policy violation. This session will be terminated.");
+                window.location.href = '/logout';
+            }
+        });
+    }
 });
 
 ```
