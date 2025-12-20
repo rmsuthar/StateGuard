@@ -201,6 +201,30 @@ This suite simulates a user attempting to delete attributes via the console and 
 
 ---
 
+### Release Notes
+
+Here are the official Release Notes for your version 1.0.0 launch. You can paste these directly into the "Releases" section of your GitHub repository.
+
+**🚀 Release v1.0.0: StateGuard.js Initial Launch
+We are excited to announce the first stable release of StateGuard.js, a proactive security utility designed to harden client-side UI logic and prevent manual DOM tampering.
+
+**🌟 Features**
+* Persistent Attribute Guard: Uses MutationObserver to instantly revert unauthorized changes to disabled, class, readonly, and more.
+* Framework First: Includes native support for React (hooks) and Angular (directives).
+* Security Thresholds: Customizable maxAttempts logic to detect and log repeated tampering behavior.
+* Automated Pipeline: Integrated GitHub Actions for automated testing and JavaScript Obfuscation.
+* Reporting Hook: Seamless onViolation callback for backend integration and audit logging.
+
+**📦 Installation**
+Download the dist/state-guard.obf.js for production.
+
+Initialize with StateGuard.protect(selector, options).
+
+🛡️ Best Practices for this Version
+Obfuscate always: Never use the src/ files in a public production environment.
+
+Update Gateway: Always use the .update() or safeUpdate methods to modify protected elements programmatically to avoid "infinite revert" loops.
+
 ### **Next Steps for You**
 
 1. **Initialize the project:** Run `npm init -y` in your folder and paste the `package.json` content.
