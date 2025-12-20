@@ -1,5 +1,5 @@
 {
-    "name": "@rmsuthar/state-guard-js",
+    "name": "@rsuthar/state-guard-js",
     "version": "1.0.0",
     "description": "Proactive DOM attribute protection library.",
     "main": "dist/state-guard.min.js",
