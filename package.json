@@ -1,9 +1,17 @@
 {
-    "name": "state-guard-js",
+    "name": "@rmsuthar/state-guard-js",
     "version": "1.0.0",
     "description": "Proactive DOM attribute protection library.",
     "main": "dist/state-guard.min.js",
     "module": "src/StateGuard.js",
+    "publishConfig": {
+        "access": "public"
+    },
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ]
     "scripts": {
         "test": "jest --forceExit --detectOpenHandles",
         "build": "mkdir -p dist && terser src/StateGuard.js -o dist/state-guard.min.js --compress --mangle",
