@@ -1,6 +1,6 @@
 {
     "name": "@rsuthar/state-guard-js",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Proactive DOM attribute protection library.",
     "keywords": [
         "dom-protection",
