@@ -2,6 +2,18 @@
     "name": "@rsuthar/state-guard-js",
     "version": "1.0.0",
     "description": "Proactive DOM attribute protection library.",
+    "keywords": [
+        "dom-protection",
+        "security",
+        "mutation-observer",
+        "tamper-protection",
+        "ui-security",
+        "javascript-security",
+        "react-security",
+        "angular-security",
+        "state-guard",
+        "client-side-security"
+    ],
     "main": "dist/state-guard.min.js",
     "module": "src/StateGuard.js",
     "publishConfig": {

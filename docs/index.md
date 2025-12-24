@@ -79,11 +79,30 @@ Snapshotting: The library takes a "Source of Truth" snapshot of an element's att
 
 **Programmatic Gateway:** Authorized changes must pass through the .update() method, which temporarily unlocks the element and updates the snapshot.
 
-**Installation**
-Include the obfuscated or minified version of StateGuard.js at the bottom of your **HTML body:**
+### Installation
+
+#### CDN
+Include the minified version of StateGuard.js via CDN:
 
 ```html
-<script src="js/state-guard.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@rsuthar/state-guard-js/dist/state-guard.min.js"></script>
+```
+
+#### NPM
+Install the package via npm:
+
+```bash
+npm install @rsuthar/state-guard-js
+```
+
+#### Yarn
+```bash
+yarn add @rsuthar/state-guard-js
+```
+
+#### PNPM
+```bash
+pnpm add @rsuthar/state-guard-js
 ```
 
 
@@ -105,12 +124,7 @@ Initializes protection on one or more elements.
 * Framework Agnostic: Works with Vanilla JS, React, and Angular.
 * Backend Sync: Built-in hooks to report "Hacker" behavior to your servers.
 
-**Installation**
 
-```bash
-# Add to your project
-npm install state-guard-js # (Hypothetical)
-```
 
 
 ## 🛠️ Integration Guide
