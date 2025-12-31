@@ -1,7 +1,9 @@
 {
     "name": "@rsuthar/state-guard-js",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Proactive DOM attribute protection library.",
+    "license": "MIT",
+    "author": "Ravindra M Suthar",
     "keywords": [
         "dom-protection",
         "security",
@@ -22,7 +24,8 @@
     "files": [
         "dist",
         "src",
-        "README.md"
+        "README.md",
+        "LICENSE"
     ],
     "scripts": {
         "test": "jest --forceExit --detectOpenHandles",
