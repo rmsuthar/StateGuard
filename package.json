@@ -31,7 +31,7 @@
         "test": "jest --forceExit --detectOpenHandles",
         "build": "mkdir -p dist && terser src/StateGuard.js -o dist/state-guard.min.js --compress --mangle",
         "obfuscate": "javascript-obfuscator src/StateGuard.js --output dist/state-guard.obf.js --self-defending true",
-        "release": "npm test && npm run build && npm run obfuscate"
+        "release": "npm test && npm version minor && npm run build && npm run obfuscate"
     },
     "jest": {
         "testEnvironment": "jsdom"
