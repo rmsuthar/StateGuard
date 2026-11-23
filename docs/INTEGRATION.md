@@ -1,7 +1,9 @@
 # Integration
 
 ## React
-Use the `elRef` on your JSX element and only modify it via `safeUpdate`.
+`import { useStateGuard } from '@rsuthar/state-guard-js/src/useStateGuard.js'`. Attach `elRef` to your JSX element and change guarded attributes only through `safeUpdate`.
 
 ## Angular
-Export the directive in your template using `#guard="stateGuard"` to access the `update` method.
+Load `dist/state-guard.min.js` through `"scripts"` in `angular.json`, then import the standalone `StateGuardDirective`. Export it in your template with `#guard="stateGuard"` to reach `update()`, and listen to `(violation)` for reports.
+
+Details are in the [wiki](wiki/Framework-Integration.md).

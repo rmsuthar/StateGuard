@@ -12,9 +12,7 @@ Or load it from a CDN:
 <script src="https://cdn.jsdelivr.net/npm/@rsuthar/state-guard-js/dist/state-guard.min.js"></script>
 ```
 
-The script defines a global `StateGuard`. In a CommonJS environment, `require('@rsuthar/state-guard-js')` returns the same object.
-
-> The package's `"module"` field points to `src/StateGuard.js`, but that file is not an ES module (it has no `export`). `import StateGuard from '@rsuthar/state-guard-js'` may fail or return `undefined`, depending on your bundler. Until that is fixed, use the global or `require`. See [Known Issues](Known-Issues).
+The build is UMD. A plain `<script>` defines `window.StateGuard`. Under CommonJS or a bundler, `require`/`import` return the same object, and it is safe to import during SSR.
 
 ## Protect an element
 
@@ -24,7 +22,7 @@ The script defines a global `StateGuard`. In a CommonJS environment, `require('@
   StateGuard.protect('#pay', {
     attributes: ['disabled', 'class'],
     maxAttempts: 3,
-    onViolation: (el, count) => console.warn('Tampering on', el.id, count)
+    onViolation: (el, count, detail) => console.warn('Tampering on', el.id, count, detail)
   });
 </script>
 ```
@@ -33,7 +31,7 @@ Removing `disabled` in DevTools now puts it straight back.
 
 ## Change a protected element from your own code
 
-Make the change inside `StateGuard.update`, so the new state becomes the trusted snapshot:
+Make the change inside `StateGuard.update`, so the new state becomes the trusted snapshot. If the callback throws, the change is rolled back.
 
 ```js
 StateGuard.update(document.getElementById('pay'), el => {

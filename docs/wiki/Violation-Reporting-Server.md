@@ -1,38 +1,37 @@
 # Violation Reporting Server
 
-[server/violation-logger.js](../../server/violation-logger.js) is an **example** Express server for receiving tamper reports sent from `onViolation`.
-
-## Running it
-
-`express` is not listed in `package.json`, so install it first:
+[server/violation-logger.js](https://github.com/rmsuthar/StateGuard/blob/main/server/violation-logger.js) is an **example** Express endpoint for tamper reports. `express` is not a dependency of the library, so install it separately.
 
 ```bash
 npm install express
-node server/violation-logger.js   # PORT env var, default 3000
+node server/violation-logger.js
 ```
 
-## Endpoint
+| Env var | Default | Purpose |
+|---|---|---|
+| `PORT` | `3000` | Listen port |
+| `STATEGUARD_LOG` | `server/tamper-incidents.log` | Log file path |
+| `TRUST_PROXY` | off | Passed to `app.set('trust proxy')` so that `req.ip` is correct behind a proxy |
 
-`POST /api/security/violation` with a JSON body:
+The module exports `app`. It only starts listening when run directly, so you can mount it or test it with supertest.
+
+## `POST /api/security/violation`
 
 ```json
-{
-  "elementId": "pay",
-  "elementTag": "BUTTON",
-  "attempts": 4,
-  "timestamp": "2026-11-23T10:00:00.000Z",
-  "userAgent": "Mozilla/5.0 ..."
-}
+{ "elementId": "pay", "elementTag": "BUTTON", "attribute": "disabled",
+  "attempts": 4, "timestamp": "2026-11-23T10:00:00.000Z" }
 ```
 
-The server writes a block to its console and appends it to `server/tamper-incidents.log`. If `attempts > 10`, it also prints a "CRITICAL" line. The response is always `200 {"status":"received","action":"logged"}`.
+| Response | When |
+|---|---|
+| `202 {"status":"received"}` | Logged |
+| `400 {"status":"invalid", ...}` | Body is not an object, or `attempts` is not a non-negative integer |
+| `429 {"status":"rate_limited"}` | More than 30 reports per IP per minute |
+| `413` | Body larger than 4 KB |
 
-The README's client example posts to `/api/security/log-tamper`, which does not match this route.
+Each report is written as **one JSON line**, with a server-side `receivedAt` timestamp. String fields are truncated and stripped of control characters, which prevents log injection. If `attempts > 10`, the server also logs a CRITICAL line. That is the place to connect your alerting.
 
-## Before using it in production
-
-- **Log injection.** Client fields go straight into a multi-line log entry. A `userAgent` containing newlines can forge entries. Strip control characters or log structured JSON.
-- **Trusted client data.** `timestamp` and `attempts` come from the client. Record a server-side timestamp instead.
-- **No validation, rate limiting, auth or body-size limit.** Anyone can flood the log file.
-- `req.ip` is the proxy's address when the server runs behind a proxy, unless you set `app.set('trust proxy', ...)`. The `clientIp` field is read from the body but never used.
-- Cross-origin pages cannot post to it because there is no CORS setup (that may be intended).
+## Production notes
+- The rate limiter is in memory and per process. Use a shared store (such as Redis) when running several instances.
+- Add authentication (a session or CSRF token) if you want to link reports to users.
+- Cross-origin pages cannot post to it because there is no CORS setup.

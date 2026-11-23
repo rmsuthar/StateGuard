@@ -64,21 +64,23 @@
     <script src="src/StateGuard.js"></script>
 
     <script>
-        // 2. Initialize Protection
+        // 1. Initialize Protection
         StateGuard.protect('#secureBtn', {
             attributes: ['disabled', 'class'],
             maxAttempts: 3,
-            onViolation: (el, count) => {
+            onViolation: (el, count, detail) => {
                 const log = document.getElementById('violationLog');
                 log.innerHTML = `<span class="alert">TAMPER DETECTED! Attempt #${count}</span><br>` +
+                    `Attribute <code>${detail.attribute}</code> restored to ` +
+                    `<code>${detail.restoredValue === null ? '(removed)' : JSON.stringify(detail.restoredValue)}</code>.<br>` +
                     `Reporting to: /api/security/violation...`;
 
-                // Simulate fetch to your Node.js server
-                console.error("Violation reported to server for element:", el.id);
+                // In a real app, POST this to server/violation-logger.js
+                console.error("Violation reported to server for element:", el.id, detail);
             }
         });
 
-        // 3. Demonstrate Authorized Update
+        // 2. Demonstrate Authorized Update
         function unlockProgrammatically() {
             const btn = document.getElementById('secureBtn');
             StateGuard.update(btn, (el) => {

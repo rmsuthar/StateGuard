@@ -12,7 +12,7 @@ Anyone with DevTools open can bypass it in seconds:
 | Bypass | How |
 |---|---|
 | Use the gateway | `StateGuard.update($0, el => el.disabled = false)` |
-| Kill all guards | `StateGuard.destruct()` |
+| Kill all guards | `StateGuard.destruct()` or `StateGuard.unprotect('*')` |
 | Replace the node | `$0.outerHTML = $0.outerHTML.replace('disabled','')` (the new node is unguarded) |
 | Skip the UI | Call the underlying API with `fetch`/`curl` |
 | Disable JS / block the script | Browser settings or an extension |
@@ -23,4 +23,4 @@ Obfuscation (`dist/state-guard.obf.js`) slows down reading the code, but it does
 
 1. **The server must authorize every action.** Treat StateGuard as UX hardening and a source of telemetry, never as a control.
 2. Treat violation reports as low-trust signals, because attackers can forge or suppress them.
-3. Be careful about automatic punishments such as forced logout. The current revert loop and the authorized-update false positive (see [Known Issues](Known-Issues)) can fire `onViolation` for legitimate users.
+3. Be careful about automatic punishments such as forced logout. Browser extensions (translators, accessibility tools, password managers) can change attributes too and trigger violations for legitimate users.

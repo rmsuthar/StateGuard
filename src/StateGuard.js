@@ -1,62 +1,244 @@
-const StateGuard = (function () {
+/*!
+ * StateGuard.js - proactive DOM attribute protection.
+ * MIT License (c) Ravindra M Suthar
+ *
+ * UMD: exposes `module.exports` under CommonJS / bundlers, otherwise a
+ * `StateGuard` global (window.StateGuard in browsers).
+ */
+(function (root, factory) {
+    if (typeof module === 'object' && module && module.exports) {
+        module.exports = factory();
+    } else {
+        root.StateGuard = factory();
+    }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+    'use strict';
+
+    const VERSION = '1.1.0';
+    const DEFAULT_MAX_ATTEMPTS = 3;
+
+    /** @type {Map<Element, Guard>} element -> active guard */
     const registry = new Map();
+
+    function normalizeOptions(opt) {
+        const o = opt || {};
+
+        const attrs = o.attributes == null ? 'all' : o.attributes;
+        if (attrs !== 'all' && !(Array.isArray(attrs) && attrs.every(a => typeof a === 'string'))) {
+            throw new TypeError("StateGuard: 'attributes' must be 'all' or an array of attribute names");
+        }
+
+        const limit = o.maxAttempts == null ? DEFAULT_MAX_ATTEMPTS : Number(o.maxAttempts);
+        if (!Number.isFinite(limit) || limit < 0) {
+            throw new TypeError("StateGuard: 'maxAttempts' must be a non-negative number");
+        }
+
+        if (o.onViolation != null && typeof o.onViolation !== 'function') {
+            throw new TypeError("StateGuard: 'onViolation' must be a function");
+        }
+
+        return {
+            attrs: attrs === 'all' ? 'all' : attrs.slice(),
+            limit,
+            onViolation: o.onViolation || null
+        };
+    }
+
+    function isElement(x) {
+        return !!x && typeof x === 'object' && x.nodeType === 1;
+    }
+
     class Guard {
+        /**
+         * @param {Element} el
+         * @param {{attributes?: string[]|'all', maxAttempts?: number,
+         *          onViolation?: (el: Element, count: number, detail: object) => void}} [opt]
+         */
         constructor(el, opt) {
+            if (!isElement(el)) {
+                throw new TypeError('StateGuard: target must be a DOM Element');
+            }
+            if (typeof MutationObserver === 'undefined') {
+                throw new Error('StateGuard: MutationObserver is not available in this environment');
+            }
+            const o = normalizeOptions(opt);
             this.el = el;
-            this.attrs = opt.attributes || 'all';
-            this.limit = opt.maxAttempts || 3;
-            this.callback = opt.onViolation || null;
-            this.snap = {};
+            this.attrs = o.attrs;
+            this.limit = o.limit;
+            this.callback = o.onViolation;
+            this.snap = new Map();
             this.count = 0;
             this.locked = false;
+            this.active = true;
             this.save();
             this.watch();
         }
+
+        /** True if changes to `name` are reverted by this guard. */
+        isGuarded(name) {
+            return this.attrs === 'all' || this.attrs.includes(name);
+        }
+
+        /** Record the element's current attributes as the trusted state. */
         save() {
-            this.snap = {};
-            Array.from(this.el.attributes).forEach(a => this.snap[a.name] = a.value);
+            this.snap = new Map();
+            for (const a of Array.from(this.el.attributes)) this.snap.set(a.name, a.value);
         }
+
         watch() {
-            this.obs = new MutationObserver(recs => {
-                if (this.locked) return;
-                recs.forEach(r => {
-                    if (this.attrs === 'all' || this.attrs.includes(r.attributeName)) {
-                        this.count++;
-                        this.revert(r.attributeName);
-                        if (this.callback && this.count >= this.limit) this.callback(this.el, this.count);
-                    }
-                });
-            });
-            this.obs.observe(this.el, { attributes: true });
+            const config = { attributes: true };
+            if (this.attrs !== 'all') config.attributeFilter = this.attrs.slice();
+            this.obs = new MutationObserver(records => this.handle(records));
+            this.obs.observe(this.el, config);
         }
+
+        expected(name) {
+            return this.snap.has(name) ? this.snap.get(name) : null;
+        }
+
+        handle(records) {
+            if (this.locked || !this.active) return;
+            const seen = new Set();
+            for (const r of records) {
+                const name = r.attributeName;
+                if (!name || seen.has(name) || !this.isGuarded(name)) continue;
+                seen.add(name);
+
+                const restoredValue = this.expected(name);
+                const attemptedValue = this.el.getAttribute(name);
+                // Already matches the trusted state (e.g. changed and changed back,
+                // or a record produced by our own revert) - not a violation.
+                if (attemptedValue === restoredValue) continue;
+
+                this.revert(name);
+                this.count++;
+                this.notify({ attribute: name, attemptedValue, restoredValue });
+            }
+            // Drop the records generated by our own reverts so they are never
+            // re-processed (this is what prevents an infinite revert loop).
+            this.obs.takeRecords();
+        }
+
+        notify(detail) {
+            if (!this.callback || this.count < this.limit) return;
+            try {
+                this.callback(this.el, this.count, detail);
+            } catch (err) {
+                // A faulty callback must never disable protection.
+                if (typeof console !== 'undefined') console.error('[StateGuard] onViolation threw:', err);
+            }
+        }
+
         revert(name) {
-            this.snap[name] !== undefined ? this.el.setAttribute(name, this.snap[name]) : this.el.removeAttribute(name);
+            const value = this.expected(name);
+            if (value === null) this.el.removeAttribute(name);
+            else this.el.setAttribute(name, value);
         }
+
+        /** Restore every guarded attribute to the snapshot. */
+        restore() {
+            for (const a of Array.from(this.el.attributes)) {
+                if (this.isGuarded(a.name) && !this.snap.has(a.name)) this.el.removeAttribute(a.name);
+            }
+            this.snap.forEach((value, name) => {
+                if (this.isGuarded(name) && this.el.getAttribute(name) !== value) this.el.setAttribute(name, value);
+            });
+        }
+
+        /**
+         * Authorized-change gateway. Runs `fn(el)` synchronously with the guard
+         * paused, then adopts the resulting attributes as the new trusted state.
+         * If `fn` throws, the changes are rolled back and the error re-thrown;
+         * the guard stays active either way.
+         */
         exec(fn) {
+            if (typeof fn !== 'function') throw new TypeError('StateGuard: update callback must be a function');
+            if (!this.active) throw new Error('StateGuard: this guard has been disconnected');
+
             this.locked = true;
-            fn(this.el);
-            this.save();
-            this.locked = false;
+            let ok = false;
+            try {
+                const result = fn(this.el);
+                ok = true;
+                if (result && typeof result.then === 'function' && typeof console !== 'undefined') {
+                    console.warn('[StateGuard] update callbacks must be synchronous; changes made after an await will be reverted.');
+                }
+                return result;
+            } finally {
+                if (ok) this.save();
+                else this.restore();
+                // Our own mutations are authorized: discard their records.
+                this.obs.takeRecords();
+                this.locked = false;
+            }
+        }
+
+        /** Reset the violation counter. */
+        resetCount() {
+            this.count = 0;
+        }
+
+        /** Stop guarding and release the element. */
+        disconnect() {
+            if (!this.active) return;
+            this.active = false;
+            this.obs.disconnect();
+            if (registry.get(this.el) === this) registry.delete(this.el);
         }
     }
 
-    window.console.clear = () => {
-        console.warn("Console clearing is disabled for security auditing.");
-    };
+    function resolveTargets(target) {
+        if (typeof target === 'string') {
+            if (typeof document === 'undefined') throw new Error('StateGuard: document is not available in this environment');
+            return Array.from(document.querySelectorAll(target));
+        }
+        if (isElement(target)) return [target];
+        if (target && typeof target.length === 'number') return Array.from(target).filter(isElement);
+        throw new TypeError('StateGuard: target must be a CSS selector, an Element, or a list of Elements');
+    }
+
+    function guard(el, opt) {
+        const existing = registry.get(el);
+        if (existing) existing.disconnect();
+        const g = new Guard(el, opt);
+        registry.set(el, g);
+        return g;
+    }
 
     return {
-        protect: (sel, opt) => {
-            document.querySelectorAll(sel).forEach(e => registry.set(e, new Guard(e, opt)));
+        version: VERSION,
+        Guard,
+
+        /** Protect every element matched by a selector, Element or list. Returns the guards. */
+        protect: (target, opt) => resolveTargets(target).map(el => guard(el, opt)),
+
+        /** Protect a single element and return its guard handle. */
+        guard,
+
+        /** Make an authorized change. Returns fn's result, or undefined if `el` is not protected. */
+        update: (el, fn) => {
+            const g = registry.get(el);
+            return g ? g.exec(fn) : undefined;
         },
-        update: (el, fn) => registry.get(el)?.exec(fn),
-        // ADD THIS: Method to kill all observers for testing
+
+        /** Stop protecting the target(s). Returns the number of guards removed. */
+        unprotect: target => {
+            let n = 0;
+            for (const el of resolveTargets(target)) {
+                const g = registry.get(el);
+                if (g) { g.disconnect(); n++; }
+            }
+            return n;
+        },
+
+        isProtected: el => registry.has(el),
+
+        getGuard: el => registry.get(el),
+
+        /** Disconnect every guard. */
         destruct: () => {
-            registry.forEach(guard => guard.obs.disconnect());
+            Array.from(registry.values()).forEach(g => g.disconnect());
             registry.clear();
         }
     };
-})();
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = StateGuard;
-}
+});

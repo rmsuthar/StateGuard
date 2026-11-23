@@ -1,46 +1,52 @@
 # Framework Integration
 
-> ⚠️ **Status:** neither adapter works in v1.1.0. Both call `StateGuard.Guard`, which the core library does not export, so they throw `TypeError: StateGuard.Guard is not a constructor`. Use the [workaround](#workaround-until-fixed) below until they are fixed.
+Both adapters are thin wrappers around `StateGuard.guard()` and use only `exec()` and `disconnect()`.
 
-## React: `useStateGuard(options)` ([src/useStateGuard.js](../../src/useStateGuard.js))
-
-Intended usage:
+## React: `useStateGuard(options)` ([src/useStateGuard.js](https://github.com/rmsuthar/StateGuard/blob/main/src/useStateGuard.js))
 
 ```jsx
-const { elRef, safeUpdate } = useStateGuard({ attributes: ['class'] });
-return <button ref={elRef} className="locked">Go</button>;
-// later: safeUpdate(el => el.classList.remove('locked'));
+import { useStateGuard } from '@rsuthar/state-guard-js/src/useStateGuard.js';
+
+function PayButton({ onTamper }) {
+  const { elRef, safeUpdate } = useStateGuard({
+    attributes: ['disabled'],
+    maxAttempts: 2,
+    onViolation: (el, count, detail) => onTamper(detail)
+  });
+  return <button ref={elRef} disabled>Pay</button>;
+}
+// safeUpdate(el => el.removeAttribute('disabled'));
 ```
 
-Note that the hook returns `elRef`. The README's example uses `elementRef`, which is wrong.
+- The guard is created after mount and disconnected on unmount.
+- It is recreated **only** when the *contents* of `attributes` or the value of `maxAttempts` change, so inline option objects are fine.
+- `onViolation` is read through a ref, so the latest callback is always used without recreating the guard.
+- `safeUpdate` keeps the same identity across renders. It returns `undefined` before mount.
+- **Who owns the attributes:** if React re-renders a guarded attribute (for example `disabled={state}`), that change happens outside the gateway and gets reverted. Either leave guarded attributes out of JSX, or change them with `safeUpdate`.
+- The hook imports `./StateGuard.js`, which is CommonJS. Webpack, Vite and similar bundlers handle that interop automatically.
 
-Other issues in the hook:
-- It relies on a global `StateGuard` but never imports it.
-- `options` is listed in the `useEffect` dependencies. An inline object (or the default `{}`) is a new object on every render, so the guard is torn down and recreated each render, and every recreation re-snapshots whatever state the element is in, including tampered state.
-- It logs to `console.log` on every unmount.
+## Angular: `StateGuardDirective` ([src/state-guard.dir.ts](https://github.com/rmsuthar/StateGuard/blob/main/src/state-guard.dir.ts))
 
-## Angular: `StateGuardDirective` ([src/state-guard.dir.ts](../../src/state-guard.dir.ts))
-
-Intended usage:
+1. Load the core as a global in `angular.json`:
+   ```json
+   "scripts": ["node_modules/@rsuthar/state-guard-js/dist/state-guard.min.js"]
+   ```
+2. Import the standalone directive in your component's `imports` array.
 
 ```html
-<button appStateGuard #g="stateGuard" [protectedAttributes]="['disabled']">Go</button>
-<!-- in code: g.update(el => el.removeAttribute('disabled')) -->
+<button appStateGuard #g="stateGuard"
+        [protectedAttributes]="['disabled']" [maxAttempts]="3"
+        (violation)="onTamper($event)">Pay</button>
 ```
 
-- Its only input is `protectedAttributes`. It does **not** have the `(violation)` output shown in the README, and it has no `maxAttempts` or `onViolation`.
-- It reads `window.StateGuard.Guard`, which is undefined (see above).
-- It is not part of any NgModule, and it is not declared `standalone`.
-
-## Workaround until fixed
-
-Use the public API directly:
-
-```jsx
-useEffect(() => {
-  const el = ref.current;
-  el.id ||= 'sg-' + Math.random().toString(36).slice(2);
-  StateGuard.protect('#' + el.id, opts);
-  return () => StateGuard.destruct(); // note: tears down ALL guards
-}, []);
+```ts
+onTamper(v: StateGuardViolation) { /* v.element, v.count, v.attribute, v.attemptedValue, v.restoredValue */ }
+unlock() { this.g.update(el => el.removeAttribute('disabled')); }
 ```
+
+- Inputs are read once, in `ngOnInit`.
+- If the global script is missing, the directive throws an error that explains how to add it.
+- The same ownership rule applies as for React: don't bind guarded attributes with `[disabled]`. Change them through `update()`.
+
+## Testing note
+The repository has no React or Angular toolchain, so the adapters have no automated tests. The core APIs they depend on (`guard`, `exec`, `disconnect`, the `onViolation` detail) are covered by `tests/state-guard.test.js`.

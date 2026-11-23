@@ -4,29 +4,27 @@
 
 | Command | What it does |
 |---|---|
-| `npm test` | Jest with jsdom (`--forceExit --detectOpenHandles`) |
-| `npm run build` | `terser src/StateGuard.js` → `dist/state-guard.min.js` |
-| `npm run obfuscate` | `javascript-obfuscator` → `dist/state-guard.obf.js` (self-defending) |
-| `npm run release` | test → `npm version minor` (commits and tags) → build → obfuscate |
+| `npm test` | Jest. Core suite in jsdom, plus a Node-environment suite and dist checks |
+| `npm run build` | `terser` → `dist/state-guard.min.js` (keeps the `/*!` license banner) |
+| `npm run obfuscate` | `javascript-obfuscator --self-defending` → `dist/state-guard.obf.js` |
+| `npm run release` | `npm test && npm version minor` |
+| `version` (npm hook) | Runs inside `npm version`: `scripts/sync-version.js` → build → obfuscate → `git add src/StateGuard.js dist` |
 
-`npm version` makes its commit and tag **before** the build runs, so the tagged commit contains the previous `dist/`. The rebuilt `dist/` has to be committed separately (the history shows "Update obfuscated StateGuard distribution" commits for this). Building before bumping, or using a `version` lifecycle script that runs `git add dist`, fixes this.
+Because the rebuild happens in the `version` hook, the release commit and tag contain the matching `dist/` and the matching `StateGuard.version`.
+
+`--self-defending` makes the obfuscated code stop working if it is reformatted. It does **not** add an anti-debugger loop (that is `--debug-protection`).
 
 ## Tests
 
-`tests/tate-guard.test.js` (note the typo in the file name) has a single test, which checks that `destruct()` stops reverting. The core behavior has no tests yet: reverting, thresholds, `update()`, `'all'` mode. The README's claim that the suite "confirms the library restores them within the 100ms threshold" is not yet true.
+| File | Covers |
+|---|---|
+| `tests/state-guard.test.js` | Reverting (removed, modified, injected and SVG attributes), the revert-loop regression, thresholds and the `detail` payload, `maxAttempts: 0`, throwing callbacks, `update()` (keep, return value, rollback, async warning, re-entrancy from `onViolation`), single observer per element, `guard`/`unprotect`/`destruct`, option validation, no `console.clear` patch |
+| `tests/node-env.test.js` | The module loads with no `window` or `document` |
+| `tests/dist.test.js` | `dist/state-guard.min.js` exposes the same API and version as the source. The source version equals `package.json` |
 
-Suggested additions:
-- A tampered attribute is reverted, and `onViolation` fires exactly once per tamper.
-- `update()` changes are kept and do not count as violations.
-- `update()` with a throwing callback leaves the guard active.
-- Elements matched more than once and `maxAttempts: 0` behave as intended.
+MutationObserver delivery is asynchronous, so tests `await` a `setTimeout(0)` flush after each mutation.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push. It uses `actions/checkout@v3` and `actions/upload-artifact@v3`. GitHub has retired artifact actions v3, so jobs that use it now fail. Upgrade to `@v4` for both, and consider `npm ci` with `actions/setup-node`.
-
-## Housekeeping
-
-- `.env` is committed, but it contains ignore-file patterns, not environment variables. It looks like it was meant to be part of `.gitignore`. Merge it in and delete the file, so nobody later puts real secrets in a tracked `.env`.
-- `.DS_Store` is committed even though `.gitignore` lists it. Run `git rm --cached .DS_Store`.
-- The README and `docs/index.md` contain leftover AI-assistant text ("Here are the official Release Notes for your version 1.0.0...", "Would you like me to help you write..."). Remove it.
+`.github/workflows/ci.yml` runs on push and on pull requests across Node 18, 20 and 22:
+`npm ci` → build → obfuscate → test. On Node 20 it also fails the job if the committed `dist/state-guard.min.js` differs from a fresh build, and uploads `dist/` as an artifact. (The obfuscated file is randomized on every build, so the check skips it.)

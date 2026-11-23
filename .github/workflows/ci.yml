@@ -1,14 +1,28 @@
 name: StateGuard CI
-on: [push]
+on:
+  push:
+  pull_request:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
     steps:
-      - uses: actions/checkout@v3
-      - run: npm install
-      - run: npm test
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
       - run: npm run build && npm run obfuscate
-      - uses: actions/upload-artifact@v3
+      - run: npm test
+      - name: Fail if committed dist/ is stale
+        if: matrix.node == 20
+        run: git diff --exit-code -- dist/state-guard.min.js || (echo "::error::dist/ is out of date - run npm run build and commit" && exit 1)
+      - uses: actions/upload-artifact@v4
+        if: matrix.node == 20
         with:
           name: dist
           path: dist/

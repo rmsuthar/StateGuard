@@ -1,26 +1,49 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import StateGuard from './StateGuard.js';
 
-export const useStateGuard = (options = {}) => {
+/**
+ * React hook that guards the attributes of the element attached to `elRef`.
+ *
+ *   const { elRef, safeUpdate } = useStateGuard({ attributes: ['disabled'] });
+ *   <button ref={elRef} disabled>Pay</button>
+ *   safeUpdate(el => el.removeAttribute('disabled'));
+ *
+ * The guard is only re-created when `attributes` or `maxAttempts` change;
+ * inline option objects and inline `onViolation` callbacks are safe.
+ */
+export function useStateGuard(options = {}) {
     const elRef = useRef(null);
-    const guardInstance = useRef(null);
+    const guardRef = useRef(null);
+    const onViolationRef = useRef(options.onViolation);
+    onViolationRef.current = options.onViolation;
+
+    // Stable dependency key for the attribute list (arrays are new every render).
+    const attributesKey = options.attributes == null ? '"all"' : JSON.stringify(options.attributes);
+    const { maxAttempts } = options;
 
     useEffect(() => {
-        if (elRef.current) {
-            // Initialize the guard
-            guardInstance.current = new StateGuard.Guard(elRef.current, options);
-        }
+        const el = elRef.current;
+        if (!el) return undefined;
 
-        // CLEANUP FUNCTION: This stops the observer
-        return () => {
-            if (guardInstance.current && guardInstance.current.obs) {
-                guardInstance.current.obs.disconnect();
-                console.log('[StateGuard] Observer disconnected for component unmount');
+        const guard = StateGuard.guard(el, {
+            attributes: JSON.parse(attributesKey),
+            maxAttempts,
+            onViolation: (...args) => {
+                if (onViolationRef.current) onViolationRef.current(...args);
             }
-        };
-    }, [options]);
+        });
+        guardRef.current = guard;
 
-    return {
-        elRef,
-        safeUpdate: (fn) => guardInstance.current?.exec(fn)
-    };
-};
+        return () => {
+            guard.disconnect();
+            if (guardRef.current === guard) guardRef.current = null;
+        };
+    }, [attributesKey, maxAttempts]);
+
+    /** Authorized change. Returns fn's result, or undefined before mount. */
+    const safeUpdate = useCallback(fn => (guardRef.current ? guardRef.current.exec(fn) : undefined), []);
+
+    return { elRef, safeUpdate };
+}
+
+export default useStateGuard;

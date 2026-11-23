@@ -3,32 +3,40 @@
 ## Lifecycle
 
 ```
-protect(selector, opts)
-  └─ for each matched element → new Guard(el, opts)
-        ├─ save():   snap = { attrName: value, ... }   (all attributes)
-        └─ watch():  MutationObserver(el, { attributes: true })
+protect(target, opts) / guard(el, opts)
+  └─ existing guard for el? → disconnect it
+  └─ new Guard(el, opts)
+        ├─ save():   snap = Map{ attrName → value }   (all attributes)
+        └─ watch():  MutationObserver(el, { attributes: true, attributeFilter? })
 
 Someone edits an attribute
   └─ observer callback (microtask)
-        ├─ if locked → ignore whole batch
-        └─ for each record whose attributeName is guarded:
-              count++
-              revert(name)   → setAttribute(snap[name]) or removeAttribute(name)
-              if onViolation && count >= limit → onViolation(el, count)
+        ├─ locked or disconnected → ignore
+        ├─ for each guarded attribute in the batch (once per name):
+        │     if el.getAttribute(name) === snapshot value → skip (not a violation)
+        │     revert(name); count++; notify(detail) if count >= limit
+        └─ obs.takeRecords()   ← discard the records our own reverts produced
 
 update(el, fn)
-  └─ locked = true → fn(el) → save() → locked = false
+  └─ locked = true
+     try   fn(el) → save()              (success: adopt the new state)
+     catch restore() → rethrow          (failure: roll back)
+     finally obs.takeRecords(); locked = false
 ```
 
-## Key design points
+## Why there is no revert loop
 
-- **Snapshot.** Every attribute is recorded, even when only some are guarded. A guarded attribute that was absent at snapshot time is removed again if someone adds it, so injected `onclick` attributes get stripped.
-- **Scope.** Only attributes on the element itself are observed: no `subtree`, `childList` or `characterData`. Changes to text content, children, or a replacement node (`outerHTML`, `replaceWith`) are not detected.
-- **Registry.** A `Map` that holds a strong reference to each element. If a guarded element is removed from the DOM, it stays in memory and its observer stays connected until `destruct()` is called.
+`setAttribute` queues a mutation record even when the value doesn't change. Version 1.1.0 treated those records as fresh tampering, which caused an endless loop. Two independent safeguards now prevent it:
 
-## The `locked` flag and asynchronous observers
+1. **Compare against the snapshot.** A record counts as a violation only if the attribute's *current* value differs from the snapshot. Records from a revert, or from a change that was undone before the observer ran, are skipped.
+2. **`takeRecords()`.** After processing a batch, and at the end of every `update()`, the guard empties its observer's queue. Mutations it made itself are never delivered back to it.
 
-`MutationObserver` callbacks run asynchronously, as a microtask after the current script finishes. `update()` sets and clears `locked` synchronously, so by the time the callback runs, `locked` is back to `false`. The flag never actually suppresses anything. Authorized updates stay in place only because `save()` has already re-snapshotted, so the revert writes the new value back (or removes an attribute that is already gone). This has two side effects:
+The second safeguard also stops authorized updates from being counted. The `locked` flag on its own cannot do that, because observer callbacks run after `update()` has already returned.
 
-1. An authorized update can still increment `count` and fire `onViolation`.
-2. If the record's attribute is still present, the revert calls `setAttribute`. That queues **another** mutation record, which is reverted again, and so on. See the revert loop in [Known Issues](Known-Issues).
+## Scope
+- Only the element's own attributes are observed: no subtree, text or child changes. A replacement node (`outerHTML`, `replaceWith`) is not guarded.
+- When `attributes` is a list, the observer uses `attributeFilter`, so unrelated attribute changes are never delivered.
+- The registry is a `Map` that holds strong references. Call `unprotect()` or `disconnect()` when you remove guarded elements.
+
+## Module format
+The source is wrapped in UMD. If CommonJS is present (Node, Jest, bundlers), it uses `module.exports`. Otherwise it sets `globalThis.StateGuard`. Nothing touches the DOM at load time, so the module is safe to import during SSR.

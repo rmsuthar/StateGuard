@@ -17,7 +17,6 @@
         "client-side-security"
     ],
     "main": "dist/state-guard.min.js",
-    "module": "src/StateGuard.js",
     "publishConfig": {
         "access": "public"
     },
@@ -29,12 +28,16 @@
     ],
     "scripts": {
         "test": "jest --forceExit --detectOpenHandles",
-        "build": "mkdir -p dist && terser src/StateGuard.js -o dist/state-guard.min.js --compress --mangle",
+        "build": "mkdir -p dist && terser src/StateGuard.js -o dist/state-guard.min.js --compress --mangle --comments '/^!/'",
         "obfuscate": "javascript-obfuscator src/StateGuard.js --output dist/state-guard.obf.js --self-defending true",
-        "release": "npm test && npm version minor && npm run build && npm run obfuscate"
+        "version": "node scripts/sync-version.js && npm run build && npm run obfuscate && git add src/StateGuard.js dist",
+        "release": "npm test && npm version minor"
     },
     "jest": {
-        "testEnvironment": "jsdom"
+        "testEnvironment": "jsdom",
+        "testPathIgnorePatterns": [
+            "/node_modules/"
+        ]
     },
     "devDependencies": {
         "jest": "^29.0.0",

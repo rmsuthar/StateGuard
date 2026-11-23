@@ -1,36 +1,49 @@
 # API Reference
 
-The global `StateGuard` object has three methods. The `Guard` class is internal and **not** exported.
+```js
+StateGuard.protect(target, options?)  // → Guard[]
+StateGuard.guard(el, options?)        // → Guard
+StateGuard.update(el, fn)             // → fn's return value | undefined
+StateGuard.unprotect(target)          // → number of guards removed
+StateGuard.isProtected(el)            // → boolean
+StateGuard.getGuard(el)               // → Guard | undefined
+StateGuard.destruct()                 // → void
+StateGuard.version                    // → '1.1.0'
+StateGuard.Guard                      // the class (advanced; not registered when constructed directly)
+```
 
-## `StateGuard.protect(selector, options)`
-
-Finds every element matching `selector` (`document.querySelectorAll`), creates a guard for each one and stores it in an internal registry keyed by element.
+## Options
 
 | Option | Type | Default | Behavior |
 |---|---|---|---|
-| `attributes` | `string[]` \| `'all'` | `'all'` | Attribute names to guard. `'all'` guards every attribute on the element. |
-| `maxAttempts` | `number` | `3` | Threshold for `onViolation`. Because the code uses `opt.maxAttempts \|\| 3`, a value of `0` becomes `3`. |
-| `onViolation` | `(el, count) => void` | `null` | Runs on **every** violation once `count >= maxAttempts`, not just once. `count` is never reset. |
+| `attributes` | `string[]` \| `'all'` | `'all'` | Attributes to guard. Names are case-sensitive (`viewBox` on SVG). |
+| `maxAttempts` | non-negative `number` | `3` | `onViolation` fires once `count >= maxAttempts`. |
+| `onViolation` | `(el, count, detail) => void` | `null` | Called on **every** violation from the threshold onwards. If it throws, the error is logged to `console.error` and protection carries on. |
 
-**Returns:** `undefined`.
+`detail = { attribute, attemptedValue, restoredValue }`. A value of `null` means the attribute is absent.
 
-**Notes**
-- `options` is required. Calling `protect(sel)` with no options throws `TypeError` (`opt.attributes` of `undefined`).
-- The snapshot is taken when you call `protect`. Elements added to the DOM later are not guarded.
-- Calling `protect` twice on the same element replaces the registry entry, but the first observer keeps running. You end up with two observers.
+Invalid options throw `TypeError`.
 
-## `StateGuard.update(element, fn)`
+## `protect(target, options?)`
+`target` can be a CSS selector, an `Element`, or a `NodeList`/array of elements. The snapshot of each element's attributes is taken at this moment. Protecting an element that is already protected disconnects the old guard first, so an element never has more than one observer.
 
-The "authorized change" gateway. It pauses the guard, runs `fn(element)` synchronously, re-snapshots every attribute, then resumes the guard.
+## `update(el, fn)` / `guard.exec(fn)`
+1. Pauses the guard.
+2. Runs `fn(el)` **synchronously**.
+3. If it succeeds, re-snapshots all attributes and returns the result of `fn`.
+4. If it throws, restores the previous snapshot and re-throws.
+5. Throws away the mutation records it generated itself, then resumes the guard.
 
-- Does nothing (returns `undefined`) if `element` is not registered.
-- If `fn` throws, the guard **stays paused for good**. See [Known Issues](Known-Issues).
-- `fn` must be synchronous. Changes made after an `await` happen once the guard has resumed, so they get reverted.
+If `fn` returns a promise, a warning is logged, because changes made after an `await` happen outside the gateway and get reverted. `update` on an element that is not protected does nothing and does **not** call `fn`.
 
-## `StateGuard.destruct()`
+## `Guard` handle
+| Member | Description |
+|---|---|
+| `exec(fn)` | As above. Throws if the guard is disconnected. |
+| `disconnect()` | Stops observing and removes the guard from the registry. Idempotent. |
+| `resetCount()` | Sets `count` back to 0. |
+| `count` | Number of violations so far. |
+| `el` | The guarded element. |
 
-Disconnects every observer and clears the registry. Use it in tests or when tearing down a page.
-
-## Side effects of loading the script
-
-Loading the script **replaces `console.clear`** globally with a function that only prints a warning. This affects the whole page, including your own code and third-party code. It also requires `window`, so loading the script during server-side rendering (where `window` is undefined) throws.
+## Side effects
+None. Loading the script only defines `StateGuard`. Calling `protect` with a selector when there is no `document` throws a clear error.
