@@ -8,7 +8,7 @@ StateGuard.unprotect(target)          // → number of guards removed
 StateGuard.isProtected(el)            // → boolean
 StateGuard.getGuard(el)               // → Guard | undefined
 StateGuard.destruct()                 // → void
-StateGuard.version                    // → '1.1.0'
+StateGuard.version                    // → '2.0.0'
 StateGuard.Guard                      // the class (advanced; not registered when constructed directly)
 ```
 

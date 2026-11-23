@@ -1,8 +1,8 @@
 # Known Issues
 
-## Resolved in the unreleased version
+## Resolved in 2.0.0
 
-The 2026-11-23 code review found the following problems in v1.1.0. All of them have been fixed, and the ones that can be tested in jsdom have regression tests. See [CHANGELOG](https://github.com/rmsuthar/StateGuard/blob/main/CHANGELOG.md).
+The 2026-11-23 code review found the following problems in v1.1.0. All of them are fixed in 2.0.0, and the ones that can be tested in jsdom have regression tests. See [CHANGELOG](https://github.com/rmsuthar/StateGuard/blob/main/CHANGELOG.md).
 
 | # | Issue | Fix |
 |---|---|---|

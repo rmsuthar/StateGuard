@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.0 — 2026-11-23
 
 ### Fixed
 - **Infinite revert loop:** a single tamper no longer re-triggers the observer forever. Before this fix, one change could fire `onViolation` hundreds of times and freeze the tab.
