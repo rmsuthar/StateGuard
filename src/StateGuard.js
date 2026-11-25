@@ -14,7 +14,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
 
-    const VERSION = '2.0.0';
+    const VERSION = '2.1.0';
     const DEFAULT_MAX_ATTEMPTS = 3;
 
     /** @type {Map<Element, Guard>} element -> active guard */
