@@ -1,20 +1,18 @@
 import { Directive, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import type { AttributeList, Guard, StateGuardStatic, ViolationDetail } from './StateGuard';
 
 /** Payload emitted by the `(violation)` output. */
-export interface StateGuardViolation {
+export interface StateGuardViolation extends ViolationDetail {
     element: HTMLElement;
     count: number;
-    attribute: string;
-    attemptedValue: string | null;
-    restoredValue: string | null;
 }
 
 /**
  * StateGuard must be loaded as a global script, e.g. in angular.json:
  *   "scripts": ["node_modules/@rsuthar/state-guard-js/dist/state-guard.min.js"]
  */
-function resolveStateGuard(): any {
-    const sg = (globalThis as any).StateGuard;
+function resolveStateGuard(): StateGuardStatic {
+    const sg = (globalThis as { StateGuard?: StateGuardStatic }).StateGuard;
     if (!sg || typeof sg.guard !== 'function') {
         throw new Error(
             '[StateGuard] global not found. Add "node_modules/@rsuthar/state-guard-js/dist/state-guard.min.js" ' +
@@ -39,11 +37,11 @@ function resolveStateGuard(): any {
     standalone: true
 })
 export class StateGuardDirective implements OnInit, OnDestroy {
-    @Input() protectedAttributes: string[] | 'all' = 'all';
+    @Input() protectedAttributes: AttributeList = 'all';
     @Input() maxAttempts = 3;
     @Output() readonly violation = new EventEmitter<StateGuardViolation>();
 
-    private guard: any = null;
+    private guard: Guard<HTMLElement> | null = null;
 
     constructor(private readonly el: ElementRef<HTMLElement>) { }
 
@@ -51,8 +49,7 @@ export class StateGuardDirective implements OnInit, OnDestroy {
         this.guard = resolveStateGuard().guard(this.el.nativeElement, {
             attributes: this.protectedAttributes,
             maxAttempts: this.maxAttempts,
-            onViolation: (element: HTMLElement, count: number, detail: Omit<StateGuardViolation, 'element' | 'count'>) =>
-                this.violation.emit({ element, count, ...detail })
+            onViolation: (element, count, detail) => this.violation.emit({ element, count, ...detail })
         });
     }
 

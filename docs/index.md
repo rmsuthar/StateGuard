@@ -74,6 +74,7 @@ StateGuard.js locks DOM element attributes. If someone removes a `disabled` attr
 * **Tamper reporting:** `onViolation(el, count, detail)` fires once a threshold is reached.
 * **Authorized-change gateway:** `update()` applies your own changes atomically. If the callback throws, the changes roll back.
 * **React hook and Angular directive** included.
+* **TypeScript definitions** included.
 * **Small:** about 1.7 KB gzipped, with no dependencies. Safe to import during SSR.
 
 ## Installation
@@ -135,6 +136,23 @@ Protects a single element and returns its handle:
 - `StateGuard.destruct()`: disconnects every guard
 - `StateGuard.version`, `StateGuard.Guard`: the class, for advanced use
 
+## TypeScript
+
+Type definitions ship with the package (`src/StateGuard.d.ts`), so you don't need an `@types` package.
+
+```ts
+import StateGuard from '@rsuthar/state-guard-js';            // esModuleInterop
+import type { Guard, GuardOptions, ViolationDetail } from '@rsuthar/state-guard-js';
+
+const [pay] = StateGuard.protect('button', {                    // Guard<HTMLButtonElement>[]
+  attributes: ['disabled'],
+  onViolation: (el, count, detail: ViolationDetail) => report(el.id, detail)
+});
+const enabled = StateGuard.update(pay.el, el => { el.disabled = false; return true; }); // boolean | undefined
+```
+
+Tag-name selectors such as `'button'` narrow the element type, the same way `querySelectorAll` does. With a plain `<script>` tag, the `StateGuard` global is typed as well.
+
 ## Framework integration
 
 ### React
@@ -192,6 +210,7 @@ onViolation: (el, count, detail) => {
 
 ```bash
 npm test             # Jest + jsdom
+npm run test:types   # type-check the .d.ts against usage tests
 npm run build        # dist/state-guard.min.js
 npm run obfuscate    # dist/state-guard.obf.js
 npm run release      # test → bump minor → sync version → rebuild dist → commit & tag

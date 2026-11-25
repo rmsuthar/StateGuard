@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- TypeScript definitions for the core (`src/StateGuard.d.ts`, the `"types"` field in package.json). They cover `require`, `import` (esModuleInterop) and the `<script>` global. Tag-name selectors narrow the element type, and `onViolation`, `update()` and `exec()` are fully typed.
+- `npm run test:types`: compile-time tests, including `@ts-expect-error` cases, run in CI and before a release.
+- A Jest check that fails if the runtime API and the declarations drift apart.
+
+### Changed
+- The Angular directive uses the new types instead of `any`. `StateGuardViolation` now extends `ViolationDetail`.
+
 ## 2.0.0 — 2026-11-23
 
 ### Fixed

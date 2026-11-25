@@ -18,6 +18,7 @@ jobs:
       - run: npm ci
       - run: npm run build && npm run obfuscate
       - run: npm test
+      - run: npm run test:types
       - name: Fail if committed dist/ is stale
         if: matrix.node == 20
         run: git diff --exit-code -- dist/state-guard.min.js || (echo "::error::dist/ is out of date - run npm run build and commit" && exit 1)

@@ -21,9 +21,9 @@ The 2026-11-23 code review found the following problems in v1.1.0. All of them a
 
 ## Still open
 
+- **No types for the React hook.** It needs `@types/react` to type-check. The Angular directive is typed.
 - **No adapter tests.** Testing the React hook and Angular directive needs React/Angular test tooling as devDependencies.
 - **Strong registry references.** Guarded elements that are removed from the DOM stay in memory until you call `unprotect()`.
 - **No subtree or text protection.** Only the element's own attributes are guarded.
 - **Framework re-renders** of guarded attributes count as tampering. This is by design and documented in [Framework Integration](Framework-Integration).
-- **No ESM build.** Bundlers use CommonJS interop. A native `.mjs` build plus an `exports` map would make tree-shaking and type definitions cleaner.
-- **No TypeScript declarations** (`.d.ts`) for the core.
+- **No ESM build.** Bundlers use CommonJS interop. A native `.mjs` build plus an `exports` map would allow tree-shaking.

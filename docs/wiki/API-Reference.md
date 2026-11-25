@@ -12,6 +12,20 @@ StateGuard.version                    // → '2.0.0'
 StateGuard.Guard                      // the class (advanced; not registered when constructed directly)
 ```
 
+## TypeScript
+
+`src/StateGuard.d.ts` is referenced by `"types"` in package.json. Exported types:
+
+| Type | Description |
+|---|---|
+| `GuardOptions<E>` | `{ attributes?, maxAttempts?, onViolation? }` |
+| `ViolationDetail` | `{ attribute, attemptedValue, restoredValue }` |
+| `ViolationHandler<E>` | `(element: E, count, detail) => void` |
+| `Guard<E>` | Handle: `el`, `count` (read-only), `active`, `isGuarded`, `exec`, `resetCount`, `disconnect` |
+| `AttributeList`, `Target<E>`, `GuardConstructor`, `StateGuardStatic` | Supporting types |
+
+`E` is the element type. It is inferred from the element you pass, or from a tag-name selector (`protect('input')` gives `Guard<HTMLInputElement>[]`), and is `Element` otherwise. To narrow a selector explicitly, write `protect<HTMLButtonElement>('#pay')`.
+
 ## Options
 
 | Option | Type | Default | Behavior |

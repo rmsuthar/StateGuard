@@ -14,9 +14,11 @@
         "react-security",
         "angular-security",
         "state-guard",
-        "client-side-security"
+        "client-side-security",
+        "typescript"
     ],
     "main": "dist/state-guard.min.js",
+    "types": "src/StateGuard.d.ts",
     "publishConfig": {
         "access": "public"
     },
@@ -31,18 +33,21 @@
         "build": "mkdir -p dist && terser src/StateGuard.js -o dist/state-guard.min.js --compress --mangle --comments '/^!/'",
         "obfuscate": "javascript-obfuscator src/StateGuard.js --output dist/state-guard.obf.js --self-defending true",
         "version": "node scripts/sync-version.js && npm run build && npm run obfuscate && git add src/StateGuard.js dist",
-        "release": "npm test && npm version minor"
+        "release": "npm test && npm run test:types && npm version minor",
+        "test:types": "tsc -p tests/types/tsconfig.json"
     },
     "jest": {
         "testEnvironment": "jsdom",
         "testPathIgnorePatterns": [
-            "/node_modules/"
+            "/node_modules/",
+            "/tests/types/"
         ]
     },
     "devDependencies": {
+        "javascript-obfuscator": "^4.0.0",
         "jest": "^29.0.0",
         "jest-environment-jsdom": "^29.0.0",
-        "javascript-obfuscator": "^4.0.0",
-        "terser": "^5.15.0"
+        "terser": "^5.15.0",
+        "typescript": "^5.9.3"
     }
 }
